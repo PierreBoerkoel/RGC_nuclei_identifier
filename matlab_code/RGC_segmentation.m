@@ -1,8 +1,10 @@
 clear; close all;
 %I = imread('Y-8 peripheral-1-Image Export-52_c1+2.tif');
 % I = imread('Y-1 peripheral-1-Image Export-40_c1+2.tif');
- I = imread('T-2 central-1-Image Export-22_c1+2.tif');
+filename = '9MWTF3 central-1-Image Export-01_c1+2.tif';
+I = imread(strcat('/Users/pierreboerkoel/Desktop/Glaucoma Project/images/Group 1 Wildtype/', filename));
 %I = imread('9MWTF3 peripheral-1-Image Export-03_c1+2.tif');
+outliers = readtable('/Users/pierreboerkoel/git/Glaucoma_Image_Analysis/Outliers.csv');
 
 Ib = I(:,:,3); 
 
@@ -11,7 +13,20 @@ Ib = I(:,:,3);
 % 1. otsu threshold
 %Ibthre = imbinarize(Ib);
 Ibthre = Ib>30;
-%figure; imagesc(Ibthre); 
+%figure; imagesc(Ibthre);
+
+%remove outlier nuclei
+outliersRemoved = '_no_outliers_removed_';
+if ismember(filename, outliers.FileName)
+    outlierMask = ones(size(Ibthre));
+    outs = outliers(ismember(outliers.FileName, filename),:);
+    for i = 1:size(outs, 1)
+       outlierMask = outlierMask & ~bwselect(Ibthre, outs(i, :).x, outs(i, :).y);
+    end
+    Ibthre = Ibthre & outlierMask;
+    Ib = double(Ib).*outlierMask;
+    outliersRemoved = strcat('_', string(i), '_outliers_removed_');
+end
 
 % 2. close gaps to create clusters   
 se = strel('disk',12);
@@ -19,7 +34,7 @@ Icl = imdilate(Ibthre, se);
 Icl = imclose(Ibthre,se);
 %figure; imagesc(Icl); 
 
-% 3. idnentify clusters (CC) 
+% 3. identify clusters (CC) 
 CC = bwconncomp(Icl,26);
 
 % 4. identify the DAPI band clusters
@@ -62,9 +77,11 @@ Ibthre = Ibcut>30;
 %figure; imagesc(Ibthre); 
     
 % 2. fit curve
-[row, col] = find(Ibthre); 
-curve  = fit(col, row, 'smoothingspline','smoothingParam',0.000001);
-figure; subplot(1,2,1); imagesc(I(:,:,1:3)); hold on; plot(curve,'-g'); subplot(1,2,2); imagesc(Ibthre); 
+%[row, col] = find(Ibthre);
+%options = fitoptions('Method', 'SmoothingSpline', 'SmoothingParam', 0.000001); 
+%curve  = fit(col, row, 'SmoothingSpline', 'SmoothingParam', 0.000001);
+%curve  = fit(col, row);
+%figure; subplot(1,2,1); imagesc(I(:,:,1:3)); hold on; plot(curve,'-g'); subplot(1,2,2); imagesc(Ibthre); 
 %figure; subplot(1,2,1); imagesc(I(:,:,1:3)); subplot(1,2,2); imagesc( I(:,:,1:3).*uint8(repmat(Ibthre,1,1,3)));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -75,6 +92,7 @@ Ithre_cleaned = imfill(logical(abs(Ithre_mf2-1)),[631 321]);
 
 [row, col] = find(abs(Ithre_cleaned-1)); 
 curve  = fit(col, row, 'smoothingspline','smoothingParam',0.000001);
-figure; subplot(1,2,1); imagesc(I(:,:,1:3)); hold on; plot(curve,'-g'); subplot(1,2,2); imagesc(Ithre_mf2); 
+figure = subplot(1,2,1); imagesc(I(:,:,1:3)); hold on; plot(curve,'-g'); subplot(1,2,2); imagesc(Ithre_mf2);
+saveas(figure, strcat('/Users/pierreboerkoel/Desktop/Glaucoma Project/images/Group 1 Wildtype/', filename(1:end-4), outliersRemoved, 'RGC.png'));
 
 

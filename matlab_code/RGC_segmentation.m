@@ -64,26 +64,9 @@ for i = 1:size(Ymask,2)
     Ymask(maskind,i) = 0;
 end
 
-%figure; subplot(1,2,1); imagesc(Ib); subplot(1,2,2); imagesc(double(Ib).*Ymask);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 Ibcut = double(Ib).*Ymask;
 % 1. threshold
 Ibthre = Ibcut>30;
-%figure; imagesc(Ibthre);
-
-% 2. fit curve
-%[row, col] = find(Ibthre);
-%options = fitoptions('Method', 'SmoothingSpline', 'SmoothingParam', 0.000001);
-%curve  = fit(col, row, 'SmoothingSpline', 'SmoothingParam', 0.000001);
-%curve  = fit(col, row);
-%figure; subplot(1,2,1); imagesc(I(:,:,1:3)); hold on; plot(curve,'-g'); subplot(1,2,2); imagesc(Ibthre);
-%figure; subplot(1,2,1); imagesc(I(:,:,1:3)); subplot(1,2,2); imagesc( I(:,:,1:3).*uint8(repmat(Ibthre,1,1,3)));
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-% better identification of RGC
-%se = strel('disk',3);
 Ithre_mf2 = medfilt2(Ibthre);
 Ithre_cleaned = imfill(logical(abs(Ithre_mf2-1)),[631 321]);
 
@@ -99,62 +82,11 @@ upper_curve = fit(col, row-50, 'smoothingspline','smoothingParam',0.000001);
 
 rgc_curve = zeros(size(cy3_mask));
 [numRows,numCols] = size(rgc_curve);
-current_slope = 0;
+
 for i = 1:numCols
-%     if i < numCols
-%         x_current = i;
-%         y_current = ppval(coeffvalues(upper_curve),i);
-%         x_next = i + 1;
-%         y_next = -(ppval(coeffvalues(upper_curve),x_next));
-%
-%         slope = y_next - y_current;
-%         if slope ~= 0
-%             x_upper = round(x_next + sqrt((curve_distance^(2))./(1+(1/slope^(2)))));
-%             x_lower = round(x_next - sqrt((curve_distance^(2))./(1+(1/slope^(2)))));
-%             y_upper = round(y_next - ((1/slope)*(x_upper-x_next)));
-%             y_lower = round(y_next - ((1/slope)*(x_lower - x_next)));
-%         else
-%             x_upper = x_current;
-%             x_lower = x_current;
-%             y_upper = round(y_current + curve_distance/2);
-%             y_lower = round(y_current - curve_distance/2);
-%         end
-%     end
-
-%     y_upper = round(ppval(coeffvalues(curve),i) - curve_dilation_radius);
-%     y_lower = round(ppval(coeffvalues(curve),i) + curve_dilation_radius);
-%
-%     x_upper = i - curve_dilation_radius;
-%     x_lower = i + curve_dilation_radius;
-
     [xx,yy] = ndgrid((1:numRows)-ppval(coeffvalues(curve),i),(1:numCols)-i);
     rgc_mask = (xx.^2 + yy.^2)<curve_dilation_radius^2;
     rgc_curve(rgc_mask) = 1;
-
-%     if y_upper < 1
-%         y_upper = 1;
-%     elseif y_upper > numRows
-%         continue;
-%     end
-%
-%     if y_lower < 1
-%         continue;
-%     elseif y_lower > numRows
-%         y_lower = numRows;
-%     end
-%
-%     if x_lower < 1
-%         x_lower = 1;
-%     elseif x_lower > numCols
-%         x_lower = numCols;
-%     end
-%
-%     if x_upper < 1
-%         x_upper = 1;
-%     elseif x_upper > numCols
-%         x_upper = numCols;
-%     end
-    %rgc_curve(y_upper:y_lower,x_upper:x_lower) = 1;
 end
 
 rgc_cy3_curve = rgc_curve & cy3_mask;

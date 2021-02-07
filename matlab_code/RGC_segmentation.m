@@ -1,10 +1,10 @@
 clear; close all;
 
-infolder = '/Users/pierreboerkoel/Desktop/Glaucoma Project/images/Group 1 Wildtype/input_images/';
-outfolder = '/Users/pierreboerkoel/Desktop/Glaucoma Project/images/Group 1 Wildtype/analysis_45/';
+infolder = '/Users/pierreboerkoel/Desktop/Glaucoma Project/images/Group 3 9M baseline/input_images/';
+outfolder = '/Users/pierreboerkoel/Desktop/Glaucoma Project/images/Group 3 9M baseline/analysis_35/';
 
 outliers = readtable(strcat(infolder, 'outlier_nuclei.csv'));
-cy3threshold = 45;
+cy3threshold = 35;
 curve_dilation_radius = 50;
 
 imglist = dir(strcat(infolder, '**/*+2.tif'));
@@ -23,17 +23,19 @@ for i = 1:length(imglist)
 
     % dapi threshold
     Ibthre = Ib>50;
+    outThre = Ib>10; % to limit the connectedness of outlier nuclei in outlierMask
 
     % remove outlier nuclei
     outliersRemoved = '_no_outliers_removed_';
     if ismember(filename, outliers.FileName)
         outlierMask = ones(size(Ibthre));
         outs = outliers(ismember(outliers.FileName, filename),:);
+        outsFound = nnz(outlierMask);
         for k = 1:size(outs, 1)
-           outlierMask = outlierMask & ~bwselect(Ibthre, outs(k, :).x, outs(k, :).y);
+           outlierMask = outlierMask & ~bwselect(outThre, outs(k, :).x, outs(k, :).y);
         end
         Ibthre = Ibthre & outlierMask;
-        Ib = double(Ib).*outlierMask;
+        Ib = double(Ib).*Ibthre;
         outliersRemoved = strcat('_', string(size(outs, 1)), '_outliers_removed_');
         cy3_table.outliers_removed(i) = size(outs, 1);
     end
@@ -48,9 +50,9 @@ for i = 1:length(imglist)
 
     % 4. identify the DAPI band clusters
     numPixels = cellfun(@numel,CC.PixelIdxList);
-    [max1 ind1] = max(numPixels);
+    [max1, ind1] = max(numPixels);
     numPixels(ind1) = 0;
-    [max2 ind2] = max(numPixels);
+    [max2, ind2] = max(numPixels);
 
     % 4.1. identify the top DAPI band cluster
     if max2/max1 < .2
@@ -128,13 +130,13 @@ for i = 1:length(imglist)
     f = figure('visible', 'off');
     subplot(2,1,1); imagesc(I(:,:,1:3)); hold on; plot(curve,'g'); title('Curve Method');
     % subplot(3,2,2); imagesc(abs(Ithre_cleaned-1)); title('Dilation Method');
-    %subplot(3,1,2); imagesc(rgc_curve); axis square;
+    % subplot(3,1,2); imagesc(rgc_curve); axis square;
     % subplot(3,2,4); imagesc(rgc_dilation);
     subplot(2,1,2); imagesc(max_intensity_curve_sample);
     % subplot(3,2,6); imagesc(max_intensity_dilation_sample);
 
     saveas(f, strcat(outfolder, string(filename(1:end-4)), outliersRemoved, 'RGC.png'));
-    %waitfor(figure);
+    % waitfor(figure);
     imwrite(max_intensity_curve_sample, strcat(outfolder, string(filename(1:end-4)), '_threshold-', num2str(cy3threshold), '_curve_image.tif'));
     % imwrite(max_intensity_dilation_sample, strcat(outfolder, string(filename(1:end-4)), '_threshold-', num2str(cy3threshold), '_dilation_image.tif'));
 end
